@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Books World</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#6ee7b7;--glass:rgba(255,255,255,0.04)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;color:#e6eef6;background:linear-gradient(180deg,#071025 0%, #0b1b2b 100%);-webkit-font-smoothing:antialiased}
+    header{display:flex;align-items:center;justify-content:space-between;padding:20px 28px}
+    .brand{display:flex;gap:14px;align-items:center}
+    .logo{width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,#0ea5a4,#7c3aed);display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+    h1{margin:0;font-size:1.25rem}
+    p.lead{margin:0;color:var(--muted);font-size:0.95rem}
+
+    .container{max-width:1100px;margin:20px auto;padding:18px}
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:18px}
+
+    .card{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .upload-area{border:1px dashed rgba(255,255,255,0.06);padding:12px;border-radius:10px;background:var(--glass)}
+    input[type=file]{display:none}
+    .btn{display:inline-block;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#10b981,#06b6d4);color:#04202a;font-weight:600;border:none;cursor:pointer}
+    .muted{color:var(--muted);font-size:0.9rem}
+
+    .search-row{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+    .search-row input{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .filters{display:flex;gap:8px}
+
+    .book-list{display:grid;gap:10px}
+    .book{display:flex;gap:12px;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent)}
+    .thumb{width:64px;height:84px;border-radius:6px;background:#092033;display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:700;font-size:0.9rem}
+    .meta{flex:1}
+    .meta h3{margin:0;font-size:1rem}
+    .meta p{margin:4px 0 0;color:var(--muted);font-size:0.9rem}
+    .actions{display:flex;gap:8px}
+    .icon-btn{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;cursor:pointer}
+
+    footer{max-width:1100px;margin:10px auto;padding:12px 18px;color:var(--muted);font-size:0.9rem}
+
+    @media (max-width:900px){.grid{grid-template-columns:1fr}.brand h1{display:none}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">BW</div>
+      <div>
+        <h1>Books World</h1>
+        <p class="lead">Upload, manage and read your books — stored safely in your browser.</p>
+      </div>
+    </div>
+    <div>
+      <small class="muted">Client-side • No account required</small>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="grid">
+      <aside class="card">
+        <h2 style="margin-top:0">Upload books</h2>
+        <div class="upload-area" id="dropArea">
+          <p class="muted">Drag & drop files here or</p>
+          <label class="btn" for="fileInput">Choose files</label>
+          <input id="fileInput" type="file" accept=".pdf,.epub,.mobi,.txt,.zip,.mp3" multiple />
+          <p class="muted" style="margin-top:10px;font-size:0.85rem">Supported: PDF, EPUB, MOBI, TXT, ZIP, MP3. Files are saved locally in your browser (IndexedDB). Use Export/Backup to move them elsewhere.</p>
+        </div>
+
+        <hr style="border:none;height:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="backupBtn">Export backup (ZIP)</button>
+          <button class="icon-btn" id="clearBtn" title="Delete all">Clear all</button>
+        </div>
+
+        <details style="margin-top:12px;color:var(--muted)">
+          <summary style="cursor:pointer">Tips</summary>
+          <ul>
+            <li>Use the search box to find by title, author or tag.</li>
+            <li>Click a book's title to edit metadata (title/author/tags).</li>
+            <li>Preview PDFs in a new tab.</li>
+          </ul>
+        </details>
+      </aside>
+
+      <section>
+        <div class="card">
+          <div class="search-row">
+            <input id="searchInput" placeholder="Search books, authors, tags..." />
+            <div class="filters">
+              <select id="sortSelect" title="Sort">
+                <option value="new">Newest</option>
+                <option value="old">Oldest</option>
+                <option value="name">Title A–Z</option>
+                <option value="size">File size</option>
+              </select>
+              <select id="typeFilter">
+                <option value="all">All types</option>
+                <option value="pdf">PDF</option>
+                <option value="epub">EPUB</option>
+                <option value="others">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="bookList" class="book-list" style="margin-top:8px;min-height:120px">
+            <!-- books appear here -->
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div>Made with ❤️ — Books World. Files stored locally using IndexedDB. To host publicly, a server is required.</div>
+  </footer>
+
+  <script>
+  // Simple IndexedDB helper for storing files
+  const DB_NAME = 'booksworld-db';
+  const STORE = 'books';
+
+  function openDB(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if(!db.objectStoreNames.contains(STORE)){
+          const os = db.createObjectStore(STORE, {keyPath: 'id', autoIncrement: true});
+          os.createIndex('title','title',{unique:false});
+          os.createIndex('created','created',{unique:false});
+        }
+      }
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function addBook(file, meta={}){
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      const entry = {
+        filename: file.name,
+        type: file.type || guessType(file.name),
+        size: file.size,
+        blob: file,
+        title: meta.title || stripExt(file.name),
+        author: meta.author || '',
+        tags: meta.tags || [],
+        created: Date.now()
+      };
+      const req = store.add(entry);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function getAllBooks(){
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE,'readonly');
+      const store = tx.objectStore(STORE);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function getBook(id){
+    const db = await openDB();
+    return new Promise((resolve, reject) =>{
+      const tx = db.transaction(STORE,'readonly');
+      const store = tx.objectStore(STORE);
+      const req = store.get(Number(id));
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function deleteBook(id){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE,'readwrite');
+      const store = tx.objectStore(STORE);
+      const req = store.delete(Number(id));
+      req.onsuccess = ()=>resolve();
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  async function clearAll(){
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE,'readwrite');
+      const store = tx.objectStore(STORE);
+      const req = store.clear();
+      req.onsuccess = ()=>resolve();
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  async function updateMeta(id, changes){
+    const db = await openDB();
+    const book = await getBook(id);
+    if(!book) throw new Error('Not found');
+    Object.assign(book, changes);
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE,'readwrite');
+      const store = tx.objectStore(STORE);
+      const req = store.put(book);
+      req.onsuccess = ()=>resolve(req.result);
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  function stripExt(name){
+    return name.replace(/\.[^/.]+$/, '');
+  }
+  function guessType(name){
+    const ext = name.split('.').pop().toLowerCase();
+    if(ext==='pdf') return 'application/pdf';
+    if(ext==='epub') return 'application/epub+zip';
+    return '';
+  }
+
+  // UI logic
+  const fileInput = document.getElementById('fileInput');
+  const dropArea = document.getElementById('dropArea');
+  const bookList = document.getElementById('bookList');
+  const searchInput = document.getElementById('searchInput');
+  const sortSelect = document.getElementById('sortSelect');
+  const typeFilter = document.getElementById('typeFilter');
+  const backupBtn = document.getElementById('backupBtn');
+  const clearBtn = document.getElementById('clearBtn');
+
+  fileInput.addEventListener('change', async(e)=>{
+    await handleFiles(e.target.files);
+    fileInput.value='';
+  });
+
+  dropArea.addEventListener('dragover', (e)=>{e.preventDefault();dropArea.style.borderColor='rgba(110,231,183,0.6)'});
+  dropArea.addEventListener('dragleave', ()=>{dropArea.style.borderColor=''});
+  dropArea.addEventListener('drop', async(e)=>{e.preventDefault();dropArea.style.borderColor='';await handleFiles(e.dataTransfer.files)});
+
+  async function handleFiles(list){
+    const files = Array.from(list);
+    for(const f of files){
+      try{
+        await addBook(f);
+      }catch(err){console.error('Add failed',err)}
+    }
+    await refreshList();
+  }
+
+  async function refreshList(){
+    const all = await getAllBooks();
+    // apply filters
+    let filtered = all.slice();
+    const q = searchInput.value.trim().toLowerCase();
+    if(q){
+      filtered = filtered.filter(b=> (b.title || '').toLowerCase().includes(q) || (b.author || '').toLowerCase().includes(q) || (b.tags||[]).join(' ').toLowerCase().includes(q) || (b.filename||'').toLowerCase().includes(q) );
+    }
+    const type = typeFilter.value;
+    if(type!=='all'){
+      filtered = filtered.filter(b=>{
+        if(type==='pdf') return (b.filename||'').toLowerCase().endsWith('.pdf');
+        if(type==='epub') return (b.filename||'').toLowerCase().endsWith('.epub');
+        return !((b.filename||'').toLowerCase().endsWith('.pdf')||(b.filename||'').toLowerCase().endsWith('.epub'));
+      });
+    }
+    const sort = sortSelect.value;
+    filtered.sort((a,b)=>{
+      if(sort==='new') return b.created - a.created;
+      if(sort==='old') return a.created - b.created;
+      if(sort==='name') return (a.title||'').localeCompare(b.title||'');
+      if(sort==='size') return b.size - a.size;
+      return 0;
+    });
+
+    bookList.innerHTML='';
+    if(filtered.length===0){ bookList.innerHTML = '<div class="muted">No books yet. Upload some!</div>'; return }
+    for(const b of filtered){
+      const el = document.createElement('div'); el.className='book';
+      const thumb = document.createElement('div'); thumb.className='thumb';
+      thumb.textContent = (b.title||'').slice(0,2).toUpperCase();
+      const meta = document.createElement('div'); meta.className='meta';
+      const h3 = document.createElement('h3'); h3.textContent = b.title || b.filename; h3.style.cursor='pointer';
+      h3.addEventListener('click', ()=>openEditModal(b));
+      const p = document.createElement('p'); p.className='muted'; p.textContent = `${b.author || 'Unknown author'} • ${formatSize(b.size)} • ${new Date(b.created).toLocaleString()}`;
+      meta.appendChild(h3); meta.appendChild(p);
+
+      const actions = document.createElement('div'); actions.className='actions';
+      const previewBtn = document.createElement('button'); previewBtn.className='icon-btn'; previewBtn.textContent='Preview';
+      previewBtn.addEventListener('click', ()=>previewBook(b));
+      const dlBtn = document.createElement('button'); dlBtn.className='icon-btn'; dlBtn.textContent='Download';
+      dlBtn.addEventListener('click', ()=>downloadBook(b));
+      const delBtn = document.createElement('button'); delBtn.className='icon-btn'; delBtn.textContent='Delete';
+      delBtn.addEventListener('click', async ()=>{ if(confirm('Delete this book?')){ await deleteBook(b.id); await refreshList(); }});
+      actions.appendChild(previewBtn); actions.appendChild(dlBtn); actions.appendChild(delBtn);
+
+      el.appendChild(thumb); el.appendChild(meta); el.appendChild(actions);
+      bookList.appendChild(el);
+    }
+  }
+
+  function formatSize(bytes){
+    if(bytes<1024) return bytes+' B';
+    if(bytes<1024*1024) return (bytes/1024).toFixed(1)+' KB';
+    return (bytes/(1024*1024)).toFixed(2)+' MB';
+  }
+
+  async function previewBook(b){
+    const rec = await getBook(b.id);
+    if(!rec) return alert('Not found');
+    const blob = rec.blob;
+    if((rec.filename||'').toLowerCase().endsWith('.pdf')){
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(()=>URL.revokeObjectURL(url), 60*1000);
+    } else {
+      // for other types, download
+      downloadBook(rec);
+    }
+  }
+
+  function downloadBook(b){
+    const blob = b.blob || b;
+    // b might be full record
+    if(b.blob){
+      const url = URL.createObjectURL(b.blob);
+      const a = document.createElement('a'); a.href = url; a.download = b.filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
+      return;
+    }
+    alert('Download not available');
+  }
+
+  function openEditModal(b){
+    const title = prompt('Title', b.title || b.filename);
+    if(title===null) return;
+    const author = prompt('Author', b.author || '');
+    if(author===null) return;
+    const tagsRaw = prompt('Tags (comma separated)', (b.tags||[]).join(','));
+    if(tagsRaw===null) return;
+    const tags = tagsRaw.split(',').map(s=>s.trim()).filter(Boolean);
+    updateMeta(b.id, {title, author, tags}).then(()=>refreshList());
+  }
+
+  // backup/export: gather all and create zip using JSZip if available, otherwise create a JSON
+  backupBtn.addEventListener('click', async()=>{
+    const all = await getAllBooks();
+    if(all.length===0) return alert('No books to export');
+    // try to create a downloadable JSON backup (includes blobs as base64) — note: may be large
+    if(!confirm('Export will create a single JSON backup of all files (may be large). Continue?')) return;
+    const items = [];
+    for(const b of all){
+      const base64 = await blobToBase64(b.blob);
+      items.push({id:b.id,filename:b.filename,title:b.title,author:b.author,tags:b.tags,created:b.created,size:b.size,type:b.type,base64});
+    }
+    const json = JSON.stringify({exportedAt:Date.now(),items});
+    const blob = new Blob([json], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='booksworld-backup.json'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+
+  clearBtn.addEventListener('click', async()=>{ if(confirm('Delete ALL books from this browser? This cannot be undone.')){ await clearAll(); await refreshList(); }});
+
+  function blobToBase64(blob){
+    return new Promise((resolve,reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result.split(',')[1]);
+      reader.onerror = ()=> reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // Search debounce
+  let searchTimer;
+  searchInput.addEventListener('input', ()=>{ clearTimeout(searchTimer); searchTimer = setTimeout(()=>refreshList(), 250); });
+  sortSelect.addEventListener('change', refreshList);
+  typeFilter.addEventListener('change', refreshList);
+
+  // initial load
+  refreshList();
+  </script>
+</body>
+</html>
